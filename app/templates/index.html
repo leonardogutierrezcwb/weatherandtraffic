@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tempo & Percurso</title>
+    <style>
+        :root {
+            --primary-color: #4285f4;
+            --secondary-color: #34a853;
+            --background-color: #f5f5f5;
+            --card-color: #ffffff;
+            --text-color: #333333;
+        }
+
+        .dark-mode {
+            --primary-color: #8ab4f8;
+            --secondary-color: #81c995;
+            --background-color: #121212;
+            --card-color: #1e1e1e;
+            --text-color: #f5f5f5;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            transition: all 0.3s ease;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: var(--primary-color);
+            margin: 0;
+        }
+
+        .settings-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-color);
+        }
+
+        .settings-panel {
+            display: none;
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 300px;
+            height: 100%;
+            background-color: var(--card-color);
+            box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .settings-panel h2 {
+            margin-top: 0;
+            color: var(--primary-color);
+        }
+
+        .close-settings {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background-color: var(--card-color);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .card h2 {
+            margin-top: 0;
+            color: var(--primary-color);
+            font-size: 1.5rem;
+        }
+
+        .weather-icon {
+            font-size: 50px;
+            margin: 10px 0;
+        }
+
+        .weather-details {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 15px;
+        }
+
+        .weather-detail {
+            text-align: center;
+        }
+
+        .traffic-info {
+            margin-top: 15px;
+        }
+
+        .route {
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .route:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .time {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: var(--secondary-color);
+        }
+
+        .time-traffic {
+            color: #fbbc05;
+        }
+
+        .time-normal {
+            color: #34a853;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .error {
+            color: #d32f2f;
+            text-align: center;
+            padding: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Tempo & Percurso</h1>
+            <button class="settings-btn" id="settingsBtn">⚙️</button>
+        </header>
+
+        <div class="dashboard">
+            <div class="card" id="weatherCard">
+                <h2>Previsão do Tempo</h2>
+                <div class="loading">Carregando...</div>
+            </div>
+
+            <div class="card" id="trafficCard">
+                <h2>Informações de Trânsito</h2>
+                <div class="loading">Carregando...</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="settings-panel" id="settingsPanel">
+        <span class="close-settings" id="closeSettings">&times;</span>
+        <h2>Configurações</h2>
+        
+        <div class="setting-group">
+            <h3>Localização</h3>
+            <label for="homeAddress">Endereço de Casa:</label>
+            <input type="text" id="homeAddress" placeholder="Ex: Rua Exemplo, 123">
+            <p><label for="workAddress">Endereço do Trabalho:</label></p>
+            <input type="text" id="workAddress" placeholder="Ex: Av. Trabalho, 456">
+        </div>
+        
+        <div class="setting-group">
+            <h3>Tema</h3>
+            <label>
+                <input type="checkbox" id="darkModeToggle"> Modo Escuro
+            </label>
+        </div>
+        
+        <div class="setting-group">
+            <h3>API Keys</h3>
+            <label for="weatherApiKey">Chave da API de Tempo:</label>
+            <input type="text" id="weatherApiKey" placeholder="OpenWeatherMap API Key">
+            
+            <p><label for="trafficApiKey">Chave da API de Trânsito:</label></p>
+            <input type="text" id="trafficApiKey" placeholder="Google Maps API Key">
+        </div>
+        
+        <button id="saveSettings">Salvar Configurações</button>
+    </div>
+
+    <script>
+        // Configurações padrão
+        const defaultSettings = {
+            homeAddress: '',
+            workAddress: '',
+            darkMode: false,
+            weatherApiKey: '',
+            trafficApiKey: ''
+        };
+
+        // Carregar configurações do localStorage
+        function loadSettings() {
+            const savedSettings = localStorage.getItem('weatherTrafficSettings');
+            return savedSettings ? JSON.parse(savedSettings) : defaultSettings;
+        }
+
+        // Salvar configurações no localStorage
+        function saveSettings(settings) {
+            localStorage.setItem('weatherTrafficSettings', JSON.stringify(settings));
+        }
+
+        // Elementos da UI
+        const settingsBtn = document.getElementById('settingsBtn');
+        const settingsPanel = document.getElementById('settingsPanel');
+        const closeSettings = document.getElementById('closeSettings');
+        const darkModeToggle = document.getElementById('darkModeToggle');
+        const homeAddressInput = document.getElementById('homeAddress');
+        const workAddressInput = document.getElementById('workAddress');
+        const weatherApiKeyInput = document.getElementById('weatherApiKey');
+        const trafficApiKeyInput = document.getElementById('trafficApiKey');
+        const saveSettingsBtn = document.getElementById('saveSettings');
+
+        // Carregar configurações ao iniciar
+        const currentSettings = loadSettings();
+        homeAddressInput.value = currentSettings.homeAddress;
+        workAddressInput.value = currentSettings.workAddress;
+        darkModeToggle.checked = currentSettings.darkMode;
+        weatherApiKeyInput.value = currentSettings.weatherApiKey;
+        trafficApiKeyInput.value = currentSettings.trafficApiKey;
+
+        // Aplicar modo escuro se necessário
+        if (currentSettings.darkMode) {
+            document.body.classList.add('dark-mode');
+        }
+
+        // Event Listeners
+        settingsBtn.addEventListener('click', () => {
+            settingsPanel.style.display = 'block';
+        });
+
+        closeSettings.addEventListener('click', () => {
+            settingsPanel.style.display = 'none';
+        });
+
+        darkModeToggle.addEventListener('change', (e) => {
+            document.body.classList.toggle('dark-mode', e.target.checked);
+        });
+
+        saveSettingsBtn.addEventListener('click', () => {
+            const newSettings = {
+                homeAddress: homeAddressInput.value.trim(),
+                workAddress: workAddressInput.value.trim(),
+                darkMode: darkModeToggle.checked,
+                weatherApiKey: weatherApiKeyInput.value.trim(),
+                trafficApiKey: trafficApiKeyInput.value.trim()
+            };
+            
+            saveSettings(newSettings);
+            settingsPanel.style.display = 'none';
+            
+            // Recarregar dados com as novas configurações
+            loadWeatherData();
+            loadTrafficData();
+        });
+
+        // Função para carregar dados do tempo
+        async function loadWeatherData() {
+            const settings = loadSettings();
+            const weatherCard = document.getElementById('weatherCard');
+            
+            if (!settings.weatherApiKey) {
+                weatherCard.querySelector('.loading').innerHTML = 
+                    '<div class="error">Por favor, configure uma chave válida da API OpenWeatherMap nas configurações.</div>';
+                return;
+            }
+
+            try {
+                // Usar geolocalização ou endereço padrão
+                let lat = -23.5505; // São Paulo como padrão
+                let lon = -46.6333;
+                
+                if (navigator.geolocation) {
+                    const position = await new Promise((resolve, reject) => {
+                        navigator.geolocation.getCurrentPosition(resolve, reject);
+                    });
+                    lat = position.coords.latitude;
+                    lon = position.coords.longitude;
+                }
+                
+                const response = await fetch(
+                    `/api/weather?lat=${lat}&lon=${lon}&api_key=${settings.weatherApiKey}`
+                );
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Erro na API de tempo');
+                }
+                
+                const data = await response.json();
+                
+                // Mapear ícones do tempo
+                const iconMap = {
+                    '01d': '☀️', '01n': '🌙',
+                    '02d': '⛅', '02n': '⛅',
+                    '03d': '☁️', '03n': '☁️',
+                    '04d': '☁️', '04n': '☁️',
+                    '09d': '🌧️', '09n': '🌧️',
+                    '10d': '🌦️', '10n': '🌦️',
+                    '11d': '⛈️', '11n': '⛈️',
+                    '13d': '❄️', '13n': '❄️',
+                    '50d': '🌫️', '50n': '🌫️'
+                };
+                
+                const weatherIcon = iconMap[data.icon] || '🌍';
+                
+                weatherCard.innerHTML = `
+                    <h2>Previsão do Tempo em ${data.city}</h2>
+                    <div class="weather-icon">${weatherIcon}</div>
+                    <div style="font-size: 1.8rem; font-weight: bold;">${data.temp}°C</div>
+                    <div>${data.description}</div>
+                    
+                    <div class="weather-details">
+                        <div class="weather-detail">
+                            <div>Mínima</div>
+                            <div>${data.temp_min}°C</div>
+                        </div>
+                        <div class="weather-detail">
+                            <div>Máxima</div>
+                            <div>${data.temp_max}°C</div>
+                        </div>
+                        <div class="weather-detail">
+                            <div>Umidade</div>
+                            <div>${data.humidity}%</div>
+                        </div>
+                        <div class="weather-detail">
+                            <div>Vento</div>
+                            <div>${data.wind_speed} km/h</div>
+                        </div>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Erro ao carregar dados do tempo:', error);
+                weatherCard.querySelector('.loading').innerHTML = 
+                    `<div class="error">Erro ao carregar dados do tempo: ${error.message}</div>`;
+            }
+        }
+
+        // Função para carregar dados de trânsito (ATUALIZADA)
+        async function loadTrafficData() {
+            const settings = loadSettings();
+            const trafficCard = document.getElementById('trafficCard');
+            
+            if (!settings.trafficApiKey) {
+                trafficCard.querySelector('.loading').innerHTML = 
+                    '<div class="error">Por favor, configure uma chave válida da API Google Maps nas configurações.</div>';
+                return;
+            }
+            
+            if (!settings.homeAddress || !settings.workAddress) {
+                trafficCard.querySelector('.loading').innerHTML = 
+                    '<div class="error">Por favor, configure os endereços de casa e trabalho nas configurações.</div>';
+                return;
+            }
+
+            try {
+                // Mostrar estado de carregamento
+                trafficCard.querySelector('.loading').innerHTML = '<div>Calculando rotas...</div>';
+                
+                // Chamar nosso backend
+                const response = await fetch(
+                    `/api/traffic?origin=${encodeURIComponent(settings.homeAddress)}&destination=${encodeURIComponent(settings.workAddress)}&api_key=${settings.trafficApiKey}`
+                );
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Erro na API de trânsito');
+                }
+                
+                const data = await response.json();
+                
+                // Formatando os dados para exibição
+                trafficCard.innerHTML = `
+                    <h2>Informações de Trânsito</h2>
+                    <div class="traffic-info">
+                        <div class="route">
+                            <h3>Casa → Trabalho</h3>
+                            <div class="time time-traffic">${data.duration} min (com trânsito)</div>
+                            <div class="time time-normal">${data.normal_duration} min (sem trânsito)</div>
+                            <div>Distância: ${data.distance}</div>
+                        </div>
+                        <div class="route">
+                            <h3>Trabalho → Casa</h3>
+                            <div class="time time-traffic">${data.duration} min (com trânsito)</div>
+                            <div class="time time-normal">${data.normal_duration} min (sem trânsito)</div>
+                            <div>Distância: ${data.distance}</div>
+                        </div>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Erro ao carregar dados de trânsito:', error);
+                trafficCard.querySelector('.loading').innerHTML = 
+                    `<div class="error">Erro ao carregar dados de trânsito: ${error.message}</div>`;
+            }
+        }
+
+        // Carregar dados ao iniciar
+        document.addEventListener('DOMContentLoaded', () => {
+            loadWeatherData();
+            loadTrafficData();
+        });
+    </script>
+</body>
+</html>
