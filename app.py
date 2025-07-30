@@ -20,7 +20,7 @@ DEFAULT_SETTINGS = {
     'traffic_api_key': os.getenv('TRAFFIC_API_KEY', '')
 }
 
-@app.route('/app/templates/index.html')
+@app.route('/')
 def index():
     return render_template('index.html', settings=DEFAULT_SETTINGS)
 
@@ -149,8 +149,5 @@ def get_traffic():
 
 if __name__ == '__main__':
     app.run(debug=True)
-
-    # Adicione no final do arquivo
-if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
